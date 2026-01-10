@@ -1,0 +1,102 @@
+# =============================================
+# Hornet AI - Docker Compose Configuration
+# Environment-aware deployment
+# =============================================
+
+version: '3.8'
+
+services:
+  # =============================================
+  # Frontend Application
+  # =============================================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_APP_VERSION: ${APP_VERSION:-0.1.0}
+        VITE_API_URL: ${API_URL:-/api}
+    container_name: hornet-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - hornet-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hornet.rule=Host(`${DOMAIN:-localhost}`)"
+      - "traefik.http.services.hornet.loadbalancer.server.port=80"
+
+  # =============================================
+  # Backend API (Future)
+  # =============================================
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: hornet-backend
+  #   restart: unless-stopped
+  #   environment:
+  #     - NODE_ENV=production
+  #     - DATABASE_URL=${DATABASE_URL}
+  #     - REDIS_URL=${REDIS_URL}
+  #     - GEMINI_API_KEY=${GEMINI_API_KEY}
+  #     - JWT_SECRET=${JWT_SECRET}
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #   networks:
+  #     - hornet-network
+
+  # =============================================
+  # PostgreSQL Database (Future)
+  # =============================================
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: hornet-postgres
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER:-hornet}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #     POSTGRES_DB: ${POSTGRES_DB:-hornet_db}
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hornet}"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - hornet-network
+
+  # =============================================
+  # Redis Cache (Future)
+  # =============================================
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: hornet-redis
+  #   restart: unless-stopped
+  #   command: redis-server --appendonly yes
+  #   volumes:
+  #     - redis_data:/data
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - hornet-network
+
+networks:
+  hornet-network:
+    driver: bridge
+
+# volumes:
+#   postgres_data:
+#   redis_data:
