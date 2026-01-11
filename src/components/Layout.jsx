@@ -1,22 +1,51 @@
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, Link } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { HelpCircle, User } from 'lucide-react';
+import { useMemo } from 'react';
 
 export default function Layout() {
     const location = useLocation();
 
-    // Build breadcrumbs from path
-    const pathSegments = location.pathname.split('/').filter(Boolean);
-    const breadcrumb = pathSegments.length > 0
-        ? `Home / ${pathSegments.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' / ')}`
-        : 'Home';
+    // Build breadcrumbs from path - XSS SAFE version
+    const breadcrumbs = useMemo(() => {
+        const pathSegments = location.pathname.split('/').filter(Boolean);
+
+        const segmentLabels = {
+            cases: 'คดี',
+            data: 'ข้อมูล',
+            documents: 'เอกสาร',
+            collect: 'รวบรวม',
+        };
+
+        const crumbs = pathSegments.map((segment, index) => {
+            const path = '/' + pathSegments.slice(0, index + 1).join('/');
+            const label = segmentLabels[segment] || segment;
+            const isLast = index === pathSegments.length - 1;
+            return { label, path, isLast };
+        });
+
+        return [{ label: 'หน้าหลัก', path: '/', isLast: crumbs.length === 0 }, ...crumbs];
+    }, [location.pathname]);
 
     return (
         <>
             <Sidebar />
             <div className="main-content">
                 <header className="header">
-                    <div style={{ color: 'var(--text-muted)' }} dangerouslySetInnerHTML={{ __html: breadcrumb.replace(/(\S+)$/, '<b>$1</b>') }}></div>
+                    <nav style={{ display: 'flex', gap: '0.5rem', color: 'var(--text-muted)' }}>
+                        {breadcrumbs.map((crumb, index) => (
+                            <span key={crumb.path} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                {index > 0 && <span>/</span>}
+                                {crumb.isLast ? (
+                                    <strong style={{ color: 'var(--text-primary)' }}>{crumb.label}</strong>
+                                ) : (
+                                    <Link to={crumb.path} style={{ color: 'inherit', textDecoration: 'none' }}>
+                                        {crumb.label}
+                                    </Link>
+                                )}
+                            </span>
+                        ))}
+                    </nav>
                     <div style={{ display: 'flex', gap: '1rem' }}>
                         <HelpCircle size={20} style={{ color: '#999', cursor: 'pointer' }} />
                         <User size={20} style={{ color: '#999', cursor: 'pointer' }} />
